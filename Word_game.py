@@ -12,10 +12,6 @@ class word_game:
         self.nlp_model = spacy.load("en_core_web_md")
         #requires download...using spaCy for now
         #self.word_vectors = KeyedVectors.load_word2vec_format("GoogleNews-vectors-negative300.bin", binary=True)
-        
-    def input(self):
-        
-        self.word_guess = input()
     
     '''
         the challenge is finding two words that add up to one word in a way that makes sense.
@@ -30,7 +26,7 @@ class word_game:
     After randomization could check if the words that exist close to the summed vector even make sense 
     --> this is time consuming and seems dumb
     '''
-    def check_random (self, guess, threshold):
+    def check_random (self, threshold):
         
         #is_alpha makes sure no special letters
         
@@ -53,16 +49,18 @@ class word_game:
         doc2 = self.nlp_model(word2)
         word2_vector = doc2[0].vector
         
+        #can set the operation itself as a parameter so one method can handle everything
         sum_vector = word1_vector + word2_vector
+        
+        guess = input(f"{word1} + {word2} = ?")
         
         doc3 = self.nlp_model(guess)
         guess_vector = doc3[0].vector
         
         similarity = sum_vector.similarity(guess_vector)
         
-        #issue! the user won't be able to see word1 and word2 LOL
-        
+        #could change this into a while loop for them to keep guess
         if similarity >= threshold:
-            print(f" CORRECT! {word1} + {word2} = {guess}")
+            print(f" CORRECT! {word1} + {word2} = {guess}!!!")
         else:
             print("INCORRECT")
