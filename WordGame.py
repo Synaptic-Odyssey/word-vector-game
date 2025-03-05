@@ -2,10 +2,14 @@
 #from gensim.models import KeyedVectors
 import spacy
 import random
+from numpy.linalg import norm
 
+def main():
+    word_game = WordGame()
+    word_game.check_random(0.6)
 
 #Export this functionality with FastAPI or Flask to create a website
-class word_game:
+class WordGame:
     
     def __init__(self):
         
@@ -30,7 +34,23 @@ class word_game:
         
         #is_alpha makes sure no special letters
         
-        meaningful_words = [word.text for word in self.nlp.model.vocab if word.has_vector and word.is_alpha and word.is_lower]
+        print("initiated")
+        
+        meaningful_words = [word.text for word in self.nlp_model.vocab 
+                            if word.has_vector 
+                            and len(word.text) > 2
+                            and word.is_alpha
+                            # and word.is_lower                           
+                            #and word.prob >= -15
+                            ]
+
+        
+        #why is this word array so short??? Is Spacy just a horrible model? The ENTIRE length is 764 for
+        #some reason?? it feels like these are all purposefully never used words? is it an issue with the
+        #model or my code is accessing it incorrectly?
+        
+        #issue is the length is zero
+        print(f"finished processing {len(meaningful_words)}")
         
         rand1 = int(random.random()*len(meaningful_words))
         
@@ -49,18 +69,26 @@ class word_game:
         doc2 = self.nlp_model(word2)
         word2_vector = doc2[0].vector
         
+        
         #can set the operation itself as a parameter so one method can handle everything
         sum_vector = word1_vector + word2_vector
         
-        guess = input(f"{word1} + {word2} = ?")
+        
+        guess = input(f"{word1} + {word2} = ? \n")
+        
         
         doc3 = self.nlp_model(guess)
         guess_vector = doc3[0].vector
         
-        similarity = sum_vector.similarity(guess_vector)
+        #cosine similarity
+        similarity = (sum_vector @ guess_vector)/(norm(sum_vector)*norm(guess_vector))
         
         #could change this into a while loop for them to keep guess
         if similarity >= threshold:
             print(f" CORRECT! {word1} + {word2} = {guess}!!!")
         else:
             print("INCORRECT")
+            
+
+if __name__ == "__main__":
+    main()
