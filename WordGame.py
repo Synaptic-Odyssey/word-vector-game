@@ -38,8 +38,15 @@ sense than subtracting. But it would still work. In fact I should make everythin
 number of inputs and specific operations as the parameter.
 '''
 
-#TODO: other operations for words, penalization for guessing, timer
-#TODO: have website built before tuesday?
+'''
+TODO: other operations for words, penalization for guessing, timer
+TODO: for actual website new word combination is too slow. Optimize + preload all of them so they don't
+    take up the user's timer. Preloading is possible if number of rounds is fixed. But it isn't, number of 
+    rounds is dependent on time. Could preload like 10 and have threads run in the background while the
+    user is playing.
+TODO: have website built before tuesday?
+'''
+
 class WordGame:
     
     def __init__(self):
