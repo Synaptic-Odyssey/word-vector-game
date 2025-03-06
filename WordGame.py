@@ -6,11 +6,30 @@ import wordfreq
 from numpy.linalg import norm
 
 def main():
+    
+    iterations = int(input("How many rounds would you like to play? \n"))
+    
     word_game = WordGame()
-    word_game.simple_addition(0.70)
+    points = 0
+    
+    #TODO: maybe only give people 5 guesses
+    
+    for i in range(iterations):
+        
+        print(f" \n Onto round {i+1}! \n")
+        outcome = word_game.simple_addition(0.52)
+        
+        if outcome:
+            points += 1
+        
+    print(f"\n Congrats! You've won {points} out of {iterations} rounds!")
 
 
-#Export this functionality with FastAPI or Flask to create a website
+'''
+Export this functionality with FastAPI or Flask to create a website
+When I do so, ensure each operation of words makes sense for game satisfaction.
+At the very least, keep the I give up operation
+'''
 
 #TODO: SpaCy might be too inaccurate in terms of word vectors, but codepad might not fit it.
 #TODO: rewrite in gensim (more accurate larger dataset) and do it in google collab --> my priority is ensuring that this is accurate
@@ -36,26 +55,42 @@ class WordGame:
         Need to check if 2 words added together to make a 3rd "makes sense", might need a NLP model for this...
     '''
     
-    #TODO: also need to check if the word the user enter is invalid
     def simple_addition (self, threshold):
-
                         
         rand1 = int(random.random()*len(self.meaningful_words)-1)
         
         word1 = self.meaningful_words[rand1]
-
         
-        #TODO: set rand2 to a word vector value close to rand1
-        while True:
-            rand2 = int(random.random()*len(self.meaningful_words)-1)
-            if rand1 != rand2:
-                break
-            
-        word2 = self.meaningful_words[rand2]
-        
-        #doc is token container --> doc[0] is the token for the first word
+        '''
+        essentially the nlp_model takes in a word and converts it to a doc object with tokens,
+        which in turn have word bectors. doc[0].vector is the vector of the first word
+        '''
         doc1 = self.nlp_model(word1)
         word1_vector = doc1[0].vector
+
+        #making sure the words added together are somewhat similar
+        
+        close_words = []
+        
+        for word in self.meaningful_words:
+            
+            temp_doc = self.nlp_model(word)
+            temp_vector = temp_doc[0].vector
+            
+            if self.cosine_similarity(word1_vector, temp_vector) > 0.37:
+                
+                close_words.append(word)
+        
+        #print(f"close words length: {len(close_words)} \n")
+        #potential issue is that close_words could be empty, but I'm betting that's not going to happen
+        
+        
+        while True:
+            rand2 = int(random.random()*len(close_words)-1)
+            if rand1 != rand2 and word1 != close_words[rand2]:
+                break
+            
+        word2 = close_words[rand2]
         
         doc2 = self.nlp_model(word2)
         word2_vector = doc2[0].vector
@@ -69,21 +104,37 @@ class WordGame:
         
         while True:
             
-            guess = input(f"{word1} + {word2} = ? \n")
-            doc3 = self.nlp_model(guess)
-            guess_vector = doc3[0].vector
+            guess = input(f"{word1} + {word2} = ? \n")  
 
-            #cosine similarity
-            similarity = (sum_vector @ guess_vector)/(norm(sum_vector)*norm(guess_vector))
+            if guess == "I give up":
+                
+                return False
+                #break
+            
+            doc3 = self.nlp_model(guess)
+            
+            if doc3[0].has_vector:
+                guess_vector = doc3[0].vector
+
+                similarity = self.cosine_similarity(sum_vector, guess_vector)
+                
+            else:
+                print("not a valid word \n")
+            
+            #don't need an else because similarity won't be updated to a usable value
 
             if similarity > threshold and guess != word1 and guess != word2:
                 
                 print(f" \n CORRECT! {word1} + {word2} = {guess}!!!")
-                break
+                
+                return True
+                #break
             
             print("Incorrect, try again! \n")
             
             
+#TODO: Programming club challenge! Create a method for subtracting words!
+
             
     def load_meaningful_words(self, common_count):
                 
@@ -101,6 +152,14 @@ class WordGame:
                             ]
         
         return meaningful_words    
+
+
+
+    def cosine_similarity(self, vec1, vec2):
+        
+        similarity = (vec1 @ vec2)/(norm(vec1)*norm(vec2))
+        
+        return similarity
 
 
 
