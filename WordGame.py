@@ -29,6 +29,13 @@ def main():
 Export this functionality with FastAPI or Flask to create a website
 When I do so, ensure each operation of words makes sense for game satisfaction.
 At the very least, keep the I give up operation
+The variation (meaning word equations will be different for each person) ensures you can't cheat
+Which gives a nice level of satisfaction
+the objective is highest score in say 3 minutes (daily reset)
+A little scuffed but I won't check if the operation makes sense.
+As for other operations, if they are too complex it also wouldn't make sense. Adding 3 words makes more
+sense than subtracting. But it would still work. In fact I should make everything one method, have the 
+number of inputs and specific operations as the parameter.
 '''
 
 #TODO: other operations for words, penalization for guessing, timer
@@ -45,15 +52,7 @@ class WordGame:
 
         #requires download...using spaCy for now
         #self.word_vectors = KeyedVectors.load_word2vec_format("GoogleNews-vectors-negative300.bin", binary=True)
-    
-    '''
-        the challenge is finding two words that add up to one word in a way that makes sense.
-        Not just for addition of 2 words, both addition and subtraction of multiple words.
-        Do a daily time limit, users must solve as many as possible.
-        there is no fixed answer it just has to be close to the two words --> this might not work well
-        
-        Need to check if 2 words added together to make a 3rd "makes sense", might need a NLP model for this...
-    '''
+
     
     def simple_addition (self, threshold):
                         
