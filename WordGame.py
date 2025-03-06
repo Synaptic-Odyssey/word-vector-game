@@ -31,13 +31,13 @@ When I do so, ensure each operation of words makes sense for game satisfaction.
 At the very least, keep the I give up operation
 '''
 
-#TODO: SpaCy might be too inaccurate in terms of word vectors, but codepad might not fit it.
-#TODO: rewrite in gensim (more accurate larger dataset) and do it in google collab --> my priority is ensuring that this is accurate
+#TODO: other operations for words, penalization for guessing, timer
+#TODO: have website built before tuesday?
 class WordGame:
     
     def __init__(self):
         
-        #TODO: can en_core_web_lg be installed on codepad 
+        #TODO: can en_core_web_lg be installed on codepad? 
         self.nlp_model = spacy.load("en_core_web_lg")
         self.meaningful_words = self.load_meaningful_words(5000)
         
