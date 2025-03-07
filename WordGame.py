@@ -74,8 +74,7 @@ class WordGame:
         #self.word_vectors = KeyedVectors.load_word2vec_format("GoogleNews-vectors-negative300.bin", binary=True)
 
     
-    #TODO: a major issue is that if you just type a synonym of one of the two inputs, it will be correct
-    #TODO: can be solved if you check to make sure the similarity with the input vectors themselves isn't above a certain threshold
+    
     def simple_addition (self, threshold, num_guesses):
                         
         rand1 = int(random.random()*len(self.meaningful_words)-1)
@@ -99,8 +98,7 @@ class WordGame:
         #(cosine_similarities > 0.37) creates own boolean mask, likewise for (cosine_similarities < 0.78)
         close_words = [self.meaningful_words[i] for i in np.where((cosine_similarities > 0.37) & (cosine_similarities < 0.85))[0]]
         
-        print(f"close words: {len(close_words)}")
-        
+                
         while True:
             rand2 = int(random.random()*len(close_words)-1)
             if rand1 != rand2 and word1 != close_words[rand2]:
@@ -115,7 +113,7 @@ class WordGame:
         #can set the operation itself as a parameter so one method can handle everything
         sum_vector = word1_vector + word2_vector
         
-        similarity = 0
+        similarity, sim1, sim2 = 0
         
         
         
@@ -126,12 +124,12 @@ class WordGame:
             if guess == "I give up":
                 
                 print("round terminated \n")
-                print("Correct answer was: " + str(self.find_answer(sum_vector)) + "\n")
+                print("Correct answer was: " + str(self.find_answer(sum_vector, word1, word2)) + "\n")
                 return False
             
             if num_guesses == 0:
                 
-                print("Correct answer was: " + str(self.find_answer(sum_vector)) + "\n")
+                print("Correct answer was: " + str(self.find_answer(sum_vector, word1, word2)) + "\n")
                 print(" Out of guesses! \n")
                 return False
             
@@ -141,13 +139,17 @@ class WordGame:
                 guess_vector = doc3[0].vector
 
                 similarity = self.cosine_similarity(sum_vector, guess_vector)
+                #makes sure not just using a synonym of an input
+                sim1 = self.cosine_similarity(guess_vector, word1_vector)
+                sim2 = self.cosine_similarity(guess_vector, word2_vector)
                 
             else:
                 print("not a valid word \n")
             
             #don't need an else because similarity won't be updated to a usable value
-
-            if similarity > threshold and guess != word1 and guess != word2:
+            
+            
+            if similarity > threshold and guess != word1 and guess != word2 and sim1 < 0.85 and sim2 < 0.85:
                 
                 print(f" \n CORRECT! {word1} + {word2} = {guess}!!!")
                 
@@ -181,10 +183,16 @@ class WordGame:
 
 
     #TODO: cannot be the cosine product of the word itself
-    def find_answer(self, result_vector):      
-                
-        dot_products = np.dot(self.word_vectors, result_vector)
-        norms = self.vector_norms * np.linalg.norm(result_vector)
+    def find_answer(self, result_vector, word1, word2):      
+        
+        print("computing answer")
+        
+        #this is a band aid solution --> takes too long!
+        word_vectors = np.array([self.nlp_model(word)[0].vector for word in self.meaningful_words 
+                                if word != word1 and word != word2])
+
+        dot_products = np.dot(word_vectors, result_vector)
+        norms = np.linalg.norm(word_vectors, axis=1) * np.linalg.norm(result_vector)
         cosine_similarities = dot_products/norms
         
         return self.meaningful_words[np.argmax(cosine_similarities)]
