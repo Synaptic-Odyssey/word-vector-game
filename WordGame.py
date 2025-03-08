@@ -18,7 +18,7 @@ def main():
         print(f" \n Onto round {i+1}! \n")
         
         #threshold is 0.42 b/c cosine similarity is between -1 to 1
-        outcome = word_game.simple_addition(0.42, 5)
+        outcome = word_game.simple_addition(0.4, 5)
         
         if outcome:
             points += 1
@@ -64,6 +64,7 @@ class WordGame:
         #TODO: can en_core_web_lg be installed on codepad? 
         self.nlp_model = spacy.load("en_core_web_lg")
         self.meaningful_words = self.open_meaningful_words()
+        
         self.word_vectors = np.array([self.nlp_model(word)[0].vector for word in self.meaningful_words])
         self.vector_norms = np.linalg.norm(self.word_vectors, axis=1)
 
@@ -79,7 +80,7 @@ class WordGame:
         essentially the nlp_model takes in a word and converts it to a doc object with tokens,
         which in turn have word bectors. doc[0].vector is the vector of the first word
         '''
-        doc1 = self.nlp_model(word1)
+        doc1 = self.nlp_model(str(word1))
         word1_vector = doc1[0].vector
 
 
@@ -90,7 +91,7 @@ class WordGame:
         cosine_similarities = dot_products/norms
         
         #(cosine_similarities > 0.3) creates own boolean mask, likewise for (cosine_similarities < 0.8)
-        close_words = [self.meaningful_words[i] for i in np.where((cosine_similarities > 0.3) & (cosine_similarities < 0.8))[0]]
+        close_words = [self.meaningful_words[i] for i in np.where((cosine_similarities > 0.2) & (cosine_similarities < 0.78))[0]]
         
                 
         while True:
@@ -100,7 +101,7 @@ class WordGame:
             
         word2 = close_words[rand2]
         
-        doc2 = self.nlp_model(word2)
+        doc2 = self.nlp_model(str(word2))
         word2_vector = doc2[0].vector
         
         
@@ -111,7 +112,6 @@ class WordGame:
         sim1 = 0
         sim2 = 0
         
-        word_list = [word1, word2]
         
         while True:
             
@@ -120,13 +120,13 @@ class WordGame:
             if guess == "I give up":
             
                 print("round terminated \n")
-                answer, similarity_score = self.find_answer(sum_vector, word_list)
+                answer, similarity_score = self.find_answer(sum_vector, word1, word2)
                 print(f"Correct answer was: '{str(answer)}' with a similarity score of {similarity_score}% \n")
                 return False
             
             if num_guesses == 0:
                 
-                answer, similarity_score = self.find_answer(sum_vector, word_list)
+                answer, similarity_score = self.find_answer(sum_vector, word1, word2)
                 print(f"Correct answer was: '{str(answer)}' with a similarity score of {similarity_score}% \n")
                 print(" Out of guesses! \n")
                 return False
@@ -141,7 +141,7 @@ class WordGame:
                 sim1 = self.cosine_similarity(guess_vector, word1_vector)
                 sim2 = self.cosine_similarity(guess_vector, word2_vector)
                 
-                if similarity > threshold and guess != word1 and guess != word2 and sim1 < 0.78 and sim2 < 0.78:
+                if similarity > threshold and guess != word1 and guess != word2 and sim1 < 0.75 and sim2 < 0.75:
                 
                     print(f" \n CORRECT! {word1} + {word2} = {guess}!!!")
                     print(f"similarity score: {int(similarity*100)}%")
@@ -201,20 +201,47 @@ class WordGame:
             return meaningful_words
 
 
-    #maybe try printing top 3 answers, since top 1 doesn't always make sense. Also print vector value for clarity?
-    #TODO: running into the synonym of input issue here as well
-    def find_answer(self, result_vector, excluded_words):      
+    #TODO GET RID OF THAT DEPRECIATION WARNING SOMEHOW
+    #TODO: word1 for some reason is not removed?
+    def find_answer(self, result_vector, word1, word2):      
         
+        '''
+        the indices should be the same as meaningful_words, meaning the vector of a word and its 
+        text share the same indice between both arrays. Will delete these indices permanently for each
+        run time because repeating words is no fun as well. Should be restored after loading in file again.
+        Ensure that this permanent deletion causes no issues in the simple addition method.
+        '''
+        
+        i1 = np.atleast_1d(np.where(self.meaningful_words == word1)[0])
+        i2 = np.atleast_1d(np.where(self.meaningful_words == word2)[0])
+        
+        self.meaningful_words = np.delete(self.meaningful_words, [i1, i2])
+        self.word_vetors = np.delete(self.word_vectors, [i1, i2])
+        self.vector_norms = np.delete(self.vector_norms, [i1, i2])
         dot_products = np.dot(self.word_vectors, result_vector)
         norms = self.vector_norms * np.linalg.norm(result_vector)
+        cosine_similarities = dot_products/norms
         
-        mask = np.isin(self.meaningful_words, list(excluded_words))
-        cosine_similarities = np.where(mask, -np.inf, dot_products/norms)
-        max_index = np.argmax(cosine_similarities)
+        # max_index = 0
+        
+        # sorted_similarities = np.sort(cosine_similarities)
+        
+        # #cannot compare the similarity to a word vector, have to compare resultant to word vector. 
+        # # Remove synonyms beforehand
+        # for i in range(sorted_similarities.shape[0]-1, -1, -1):
+        #     break
+        
+        max_index = np.argmax(cosine_similarities)    
+            
         similarity_score = int(cosine_similarities[max_index]*100)
         
+        #this shouldn't work in the first place because the meaningful_words is 2 longer than cosine_similarities
         return self.meaningful_words[max_index], similarity_score
-
+        
+        #find highest answer below 0.75 as anything above that is usually a synonym of an input
+        
+        #or actually this doesn't work because it's comparing resultant vector
+        
 
 
 
