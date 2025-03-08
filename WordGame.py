@@ -1,5 +1,4 @@
 
-#from gensim.models import KeyedVectors
 import spacy
 import random
 import wordfreq
@@ -18,7 +17,8 @@ def main():
         
         print(f" \n Onto round {i+1}! \n")
         
-        outcome = word_game.simple_addition(0.55, 5)
+        #threshold is 0.42 b/c cosine similarity is between -1 to 1
+        outcome = word_game.simple_addition(0.42, 5)
         
         if outcome:
             points += 1
@@ -53,6 +53,8 @@ TODO: other operations for words, timer
 TODO: Increase accuracy! maybe use a larger model like gensim. Problems + annoying = nuisance being incorrect
     will definitely make the experience bothersome.
 TODO: have website built before tuesday?
+TODO: one way to ensure that the operations make sense is to ensure that there are at 
+least 2 words with above 60% accuracy or smthg like that, might be slow.
 '''
 
 class WordGame:
@@ -64,14 +66,9 @@ class WordGame:
         self.meaningful_words = self.open_meaningful_words()
         self.word_vectors = np.array([self.nlp_model(word)[0].vector for word in self.meaningful_words])
         self.vector_norms = np.linalg.norm(self.word_vectors, axis=1)
-        
-        #print(f"finished processing {len(self.meaningful_words)}")
-
-        #requires download...using spaCy for now
-        #self.word_vectors = KeyedVectors.load_word2vec_format("GoogleNews-vectors-negative300.bin", binary=True)
 
     
-    
+    #Cosine similarity is between -1 and 1
     def simple_addition (self, threshold, num_guesses):
                         
         rand1 = int(random.random()*len(self.meaningful_words)-1)
@@ -92,8 +89,8 @@ class WordGame:
         norms = self.vector_norms * np.linalg.norm(word1_vector)
         cosine_similarities = dot_products/norms
         
-        #(cosine_similarities > 0.37) creates own boolean mask, likewise for (cosine_similarities < 0.78)
-        close_words = [self.meaningful_words[i] for i in np.where((cosine_similarities > 0.37) & (cosine_similarities < 0.85))[0]]
+        #(cosine_similarities > 0.3) creates own boolean mask, likewise for (cosine_similarities < 0.8)
+        close_words = [self.meaningful_words[i] for i in np.where((cosine_similarities > 0.3) & (cosine_similarities < 0.8))[0]]
         
                 
         while True:
@@ -121,14 +118,16 @@ class WordGame:
             guess = input(f"{word1} + {word2} = ? \n")  
 
             if guess == "I give up":
-                
+            
                 print("round terminated \n")
-                print("Correct answer was: " + str(self.find_answer(sum_vector, word_list)) + "\n")
+                answer, similarity_score = self.find_answer(sum_vector, word_list)
+                print(f"Correct answer was: '{str(answer)}' with a similarity score of {similarity_score}% \n")
                 return False
             
             if num_guesses == 0:
                 
-                print("Correct answer was: " + str(self.find_answer(sum_vector, word_list)) + "\n")
+                answer, similarity_score = self.find_answer(sum_vector, word_list)
+                print(f"Correct answer was: '{str(answer)}' with a similarity score of {similarity_score}% \n")
                 print(" Out of guesses! \n")
                 return False
             
@@ -142,21 +141,20 @@ class WordGame:
                 sim1 = self.cosine_similarity(guess_vector, word1_vector)
                 sim2 = self.cosine_similarity(guess_vector, word2_vector)
                 
+                if similarity > threshold and guess != word1 and guess != word2 and sim1 < 0.78 and sim2 < 0.78:
+                
+                    print(f" \n CORRECT! {word1} + {word2} = {guess}!!!")
+                    print(f"similarity score: {int(similarity*100)}%")
+                    
+                    return True
+                
             else:
                 print("not a valid word \n")
-            
-            #don't need an else because similarity won't be updated to a usable value
-            
-            
-            if similarity > threshold and guess != word1 and guess != word2 and sim1 < 0.82 and sim2 < 0.82:
                 
-                print(f" \n CORRECT! {word1} + {word2} = {guess}!!!")
-                
-                return True
-                #break
             
             num_guesses -= 1
             
+            #might be helpful to print similarity score here
             print("Incorrect, try again! \n")
             
             
@@ -191,6 +189,7 @@ class WordGame:
         
         try:
             with open(filename, "rb") as file:
+                print("Opening file... \n")
                 return pickle.load(file)
             
         except FileNotFoundError:
@@ -203,7 +202,7 @@ class WordGame:
 
 
     #maybe try printing top 3 answers, since top 1 doesn't always make sense. Also print vector value for clarity?
-    #running into the synonym of input issue here as well
+    #TODO: running into the synonym of input issue here as well
     def find_answer(self, result_vector, excluded_words):      
         
         dot_products = np.dot(self.word_vectors, result_vector)
@@ -211,8 +210,10 @@ class WordGame:
         
         mask = np.isin(self.meaningful_words, list(excluded_words))
         cosine_similarities = np.where(mask, -np.inf, dot_products/norms)
+        max_index = np.argmax(cosine_similarities)
+        similarity_score = int(cosine_similarities[max_index]*100)
         
-        return self.meaningful_words[np.argmax(cosine_similarities)]
+        return self.meaningful_words[max_index], similarity_score
 
 
 
@@ -227,3 +228,10 @@ class WordGame:
 
 if __name__ == "__main__":
     main()
+
+
+
+    
+#requires download...using spaCy for now
+#from gensim.models import KeyedVectors
+#self.word_vectors = KeyedVectors.load_word2vec_format("GoogleNews-vectors-negative300.bin", binary=True)
