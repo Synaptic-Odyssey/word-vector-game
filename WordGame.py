@@ -5,12 +5,12 @@ import random
 import wordfreq
 import numpy as np
 from numpy.linalg import norm
+import pickle
 
 def main():
     
     iterations = int(input("How many rounds would you like to play? \n"))
     
-    print("processing words...")
     word_game = WordGame()
     points = 0
         
@@ -29,11 +29,9 @@ def main():
 '''
 Export this functionality with FastAPI or Flask to create a website
 When I do so, ensure each operation of words makes sense for game satisfaction.
-At the very least, keep the I give up operation
 The variation (meaning word equations will be different for each person) ensures you can't cheat
 Which gives a nice level of satisfaction
 the objective is highest score in say 3 minutes (daily reset)
-A little scuffed but I won't check if the operation makes sense.
 As for other operations, if they are too complex it also wouldn't make sense. Adding 3 words makes more
 sense than subtracting. But it would still work. In fact I should make everything one method, have the 
 number of inputs and specific operations as the parameter.
@@ -55,7 +53,6 @@ TODO: other operations for words, timer
 TODO: Increase accuracy! maybe use a larger model like gensim. Problems + annoying = nuisance being incorrect
     will definitely make the experience bothersome.
 TODO: have website built before tuesday?
-TODO: one of the problems is that the solution is always one of the inputs
 '''
 
 class WordGame:
@@ -64,7 +61,7 @@ class WordGame:
         
         #TODO: can en_core_web_lg be installed on codepad? 
         self.nlp_model = spacy.load("en_core_web_lg")
-        self.meaningful_words = self.load_meaningful_words(5000)
+        self.meaningful_words = self.open_meaningful_words()
         self.word_vectors = np.array([self.nlp_model(word)[0].vector for word in self.meaningful_words])
         self.vector_norms = np.linalg.norm(self.word_vectors, axis=1)
         
@@ -113,9 +110,11 @@ class WordGame:
         #can set the operation itself as a parameter so one method can handle everything
         sum_vector = word1_vector + word2_vector
         
-        similarity, sim1, sim2 = 0
+        similarity = 0
+        sim1 = 0
+        sim2 = 0
         
-        
+        word_list = [word1, word2]
         
         while True:
             
@@ -124,12 +123,12 @@ class WordGame:
             if guess == "I give up":
                 
                 print("round terminated \n")
-                print("Correct answer was: " + str(self.find_answer(sum_vector, word1, word2)) + "\n")
+                print("Correct answer was: " + str(self.find_answer(sum_vector, word_list)) + "\n")
                 return False
             
             if num_guesses == 0:
                 
-                print("Correct answer was: " + str(self.find_answer(sum_vector, word1, word2)) + "\n")
+                print("Correct answer was: " + str(self.find_answer(sum_vector, word_list)) + "\n")
                 print(" Out of guesses! \n")
                 return False
             
@@ -149,7 +148,7 @@ class WordGame:
             #don't need an else because similarity won't be updated to a usable value
             
             
-            if similarity > threshold and guess != word1 and guess != word2 and sim1 < 0.85 and sim2 < 0.85:
+            if similarity > threshold and guess != word1 and guess != word2 and sim1 < 0.82 and sim2 < 0.82:
                 
                 print(f" \n CORRECT! {word1} + {word2} = {guess}!!!")
                 
@@ -164,7 +163,7 @@ class WordGame:
 #TODO: Programming club challenge! Create a method for subtracting words!
 
 #TODO: save this as a file so I can load these on directly in the future           
-    def load_meaningful_words(self, common_count):
+    def load_meaningful_words(self, common_count = 5000):
                 
         common_words = wordfreq.top_n_list("en", common_count)
                 
@@ -179,21 +178,39 @@ class WordGame:
                             #and word.prob >= -15
                             ]
         
-        return meaningful_words    
-
-
-    #TODO: cannot be the cosine product of the word itself
-    def find_answer(self, result_vector, word1, word2):      
+        return meaningful_words
+    
+    
+    def save_meaningful_words(self, meaningful_words, filename = "meaningful_words.pk1"):
         
-        print("computing answer")
+        with open(filename, "wb") as file:
+            pickle.dump(meaningful_words, file)
+    
+            
+    def open_meaningful_words(self, filename = "meaningful_words.pk1"):
         
-        #this is a band aid solution --> takes too long!
-        word_vectors = np.array([self.nlp_model(word)[0].vector for word in self.meaningful_words 
-                                if word != word1 and word != word2])
+        try:
+            with open(filename, "rb") as file:
+                return pickle.load(file)
+            
+        except FileNotFoundError:
+            
+            print("File not found. Processing words...")
+            meaningful_words = self.load_meaningful_words()
+            self.save_meaningful_words(meaningful_words, filename)
+            
+            return meaningful_words
 
-        dot_products = np.dot(word_vectors, result_vector)
-        norms = np.linalg.norm(word_vectors, axis=1) * np.linalg.norm(result_vector)
-        cosine_similarities = dot_products/norms
+
+    #maybe try printing top 3 answers, since top 1 doesn't always make sense. Also print vector value for clarity?
+    #running into the synonym of input issue here as well
+    def find_answer(self, result_vector, excluded_words):      
+        
+        dot_products = np.dot(self.word_vectors, result_vector)
+        norms = self.vector_norms * np.linalg.norm(result_vector)
+        
+        mask = np.isin(self.meaningful_words, list(excluded_words))
+        cosine_similarities = np.where(mask, -np.inf, dot_products/norms)
         
         return self.meaningful_words[np.argmax(cosine_similarities)]
 
