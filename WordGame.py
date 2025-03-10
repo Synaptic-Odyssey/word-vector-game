@@ -18,7 +18,7 @@ def main():
         print(f" \n Onto round {i+1}! \n")
         
         #threshold is 0.42 b/c cosine similarity is between -1 to 1
-        outcome = word_game.simple_addition(0.4, 5)
+        outcome = word_game.simple_subtraction(0.4, 5)
         
         if outcome:
             points += 1
@@ -71,38 +71,7 @@ class WordGame:
     #Cosine similarity is between -1 and 1
     def simple_addition (self, threshold, num_guesses):
                         
-        rand1 = int(random.random()*len(self.meaningful_words)-1)
-        
-        word1 = self.meaningful_words[rand1]
-        
-        '''
-        essentially the nlp_model takes in a word and converts it to a doc object with tokens,
-        which in turn have word bectors. doc[0].vector is the vector of the first word
-        '''
-        doc1 = self.nlp_model(str(word1))
-        word1_vector = doc1[0].vector
-
-
-        #making sure the words added together are somewhat similar   
-        
-        dot_products = np.dot(self.word_vectors, word1_vector)
-        norms = self.vector_norms * np.linalg.norm(word1_vector)
-        cosine_similarities = dot_products/norms
-        
-        #(cosine_similarities > 0.3) creates own boolean mask, likewise for (cosine_similarities < 0.8)
-        close_words = [self.meaningful_words[i] for i in np.where((cosine_similarities > 0.2) & (cosine_similarities < 0.78))[0]]
-        
-                
-        while True:
-            rand2 = int(random.random()*len(close_words)-1)
-            if rand1 != rand2 and word1 != close_words[rand2]:
-                break
-            
-        word2 = close_words[rand2]
-        
-        doc2 = self.nlp_model(str(word2))
-        word2_vector = doc2[0].vector
-        
+        word1, word2, word1_vector, word2_vector = self.find_words()
         
         #can set the operation itself as a parameter so one method can handle everything
         sum_vector = word1_vector + word2_vector
@@ -158,8 +127,103 @@ class WordGame:
             print("Incorrect, try again! \n")
             
             
-#TODO: Programming club challenge! Create a method for subtracting words!
+            
+    def simple_subtraction (self, threshold, num_guesses):
+                        
+        word1, word2, word1_vector, word2_vector = self.find_words()
+        
+        difference_vector = word1_vector + word2_vector
+        
+        similarity = 0
+        sim1 = 0
+        sim2 = 0
+        
+        
+        while True:
+            
+            guess = input(f"{word1} - {word2} = ? \n")  
 
+            if guess == "I give up":
+            
+                print("round terminated \n")
+                answer, similarity_score = self.find_answer(difference_vector, word1, word2)
+                print(f"Answer with highest similarity was: '{str(answer)}' with a similarity score of {similarity_score}% \n")
+                return False
+            
+            if num_guesses == 0:
+                
+                answer, similarity_score = self.find_answer(difference_vector, word1, word2)
+                print(f"Answer with highest similarity was: '{str(answer)}' with a similarity score of {similarity_score}% \n")
+                print(" Out of guesses! \n")
+                return False
+            
+            doc3 = self.nlp_model(guess)
+            
+            if doc3[0].has_vector:
+                guess_vector = doc3[0].vector
+
+                similarity = self.cosine_similarity(difference_vector, guess_vector)
+                #makes sure not just using a synonym of an input
+                sim1 = self.cosine_similarity(guess_vector, word1_vector)
+                sim2 = self.cosine_similarity(guess_vector, word2_vector)
+                
+                if similarity > threshold and guess != word1 and guess != word2 and sim1 < 0.75 and sim2 < 0.75:
+                
+                    print(f" \n CORRECT! {word1} - {word2} = {guess}!!!")
+                    print(f"similarity score: {int(similarity*100)}%")
+                    
+                    return True
+                
+            else:
+                print("not a valid word \n")
+                
+            
+            num_guesses -= 1
+            
+            incorrect_similarity = self.cosine_similarity(difference_vector, guess_vector)
+            print(f"Similarity was below threshold: {int(incorrect_similarity*100)}% \n")
+            print("Incorrect, try again! \n")
+    
+    
+            
+    def find_words(self):
+        
+        rand1 = int(random.random()*len(self.meaningful_words)-1)
+        
+        word1 = self.meaningful_words[rand1]
+        
+        '''
+        essentially the nlp_model takes in a word and converts it to a doc object with tokens,
+        which in turn have word bectors. doc[0].vector is the vector of the first word
+        '''
+        doc1 = self.nlp_model(str(word1))
+        word1_vector = doc1[0].vector
+
+
+        #making sure the words added together are somewhat similar   
+        
+        dot_products = np.dot(self.word_vectors, word1_vector)
+        norms = self.vector_norms * np.linalg.norm(word1_vector)
+        cosine_similarities = dot_products/norms
+        
+        #(cosine_similarities > 0.3) creates own boolean mask, likewise for (cosine_similarities < 0.8)
+        close_words = [self.meaningful_words[i] for i in np.where((cosine_similarities > 0.2) & (cosine_similarities < 0.78))[0]]
+        
+                
+        while True:
+            rand2 = int(random.random()*len(close_words)-1)
+            if rand1 != rand2 and word1 != close_words[rand2]:
+                break
+            
+        word2 = close_words[rand2]
+        
+        doc2 = self.nlp_model(str(word2))
+        word2_vector = doc2[0].vector
+        
+        return word1, word2, word1_vector, word2_vector    
+    
+    
+            
 
     def load_meaningful_words(self, common_count = 5000):
                 
