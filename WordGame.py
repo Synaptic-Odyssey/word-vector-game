@@ -61,7 +61,6 @@ class WordGame:
     
     def __init__(self):
         
-        #TODO: can en_core_web_lg be installed on codepad? 
         self.nlp_model = spacy.load("en_core_web_lg")
         self.meaningful_words = self.open_meaningful_words()
         
@@ -121,13 +120,13 @@ class WordGame:
             
                 print("round terminated \n")
                 answer, similarity_score = self.find_answer(sum_vector, word1, word2)
-                print(f"Correct answer was: '{str(answer)}' with a similarity score of {similarity_score}% \n")
+                print(f"Answer with highest similarity was: '{str(answer)}' with a similarity score of {similarity_score}% \n")
                 return False
             
             if num_guesses == 0:
                 
                 answer, similarity_score = self.find_answer(sum_vector, word1, word2)
-                print(f"Correct answer was: '{str(answer)}' with a similarity score of {similarity_score}% \n")
+                print(f"Answer with highest similarity was: '{str(answer)}' with a similarity score of {similarity_score}% \n")
                 print(" Out of guesses! \n")
                 return False
             
@@ -154,13 +153,14 @@ class WordGame:
             
             num_guesses -= 1
             
-            #might be helpful to print similarity score here
+            incorrect_similarity = self.cosine_similarity(sum_vector, guess_vector)
+            print(f"Similarity was below threshold: {int(incorrect_similarity*100)}% \n")
             print("Incorrect, try again! \n")
             
             
 #TODO: Programming club challenge! Create a method for subtracting words!
 
-#TODO: save this as a file so I can load these on directly in the future           
+
     def load_meaningful_words(self, common_count = 5000):
                 
         common_words = wordfreq.top_n_list("en", common_count)
@@ -201,48 +201,19 @@ class WordGame:
             return meaningful_words
 
 
-    #TODO GET RID OF THAT DEPRECIATION WARNING SOMEHOW
-    #TODO: word1 for some reason is not removed?
+    #TODO: Programming club --> print top 3 answers since top answer is usually synonym of an input
+    #TODO: alternatively you could find the most similar answers, compare similarity with inputs and reject if it is too high
     def find_answer(self, result_vector, word1, word2):      
         
-        '''
-        the indices should be the same as meaningful_words, meaning the vector of a word and its 
-        text share the same indice between both arrays. Will delete these indices permanently for each
-        run time because repeating words is no fun as well. Should be restored after loading in file again.
-        Ensure that this permanent deletion causes no issues in the simple addition method.
-        '''
-        
-        i1 = np.atleast_1d(np.where(self.meaningful_words == word1)[0])
-        i2 = np.atleast_1d(np.where(self.meaningful_words == word2)[0])
-        
-        self.meaningful_words = np.delete(self.meaningful_words, [i1, i2])
-        self.word_vetors = np.delete(self.word_vectors, [i1, i2])
-        self.vector_norms = np.delete(self.vector_norms, [i1, i2])
         dot_products = np.dot(self.word_vectors, result_vector)
         norms = self.vector_norms * np.linalg.norm(result_vector)
-        cosine_similarities = dot_products/norms
-        
-        # max_index = 0
-        
-        # sorted_similarities = np.sort(cosine_similarities)
-        
-        # #cannot compare the similarity to a word vector, have to compare resultant to word vector. 
-        # # Remove synonyms beforehand
-        # for i in range(sorted_similarities.shape[0]-1, -1, -1):
-        #     break
-        
-        max_index = np.argmax(cosine_similarities)    
-            
+        mask = np.isin(self.meaningful_words, list([word1, word2]))
+        cosine_similarities = np.where(mask, -np.inf, dot_products/norms)
+        max_index = np.argmax(cosine_similarities)
         similarity_score = int(cosine_similarities[max_index]*100)
         
-        #this shouldn't work in the first place because the meaningful_words is 2 longer than cosine_similarities
         return self.meaningful_words[max_index], similarity_score
         
-        #find highest answer below 0.75 as anything above that is usually a synonym of an input
-        
-        #or actually this doesn't work because it's comparing resultant vector
-        
-
 
 
     def cosine_similarity(self, vec1, vec2):
@@ -257,6 +228,40 @@ if __name__ == "__main__":
     main()
 
 
+
+'''
+the indices should be the same as meaningful_words, meaning the vector of a word and its 
+text share the same indice between both arrays. Will delete these indices permanently for each
+run time because repeating words is no fun as well. Should be restored after loading in file again.
+Ensure that this permanent deletion causes no issues in the simple addition method.
+'''
+
+#code that doesn't work for find answer (the current code shouldn't work but it does for some reason)
+#This code was meant to fix the indices being off by 2 but it doesn't work (doesn't acctually delete word1 & word2)
+
+        # i1 = np.nonzero(self.meaningful_words == word1)[0]
+        # i2 = np.nonzero(self.meaningful_words == word2)[0]
+
+        # # i1 = np.atleast_1d(np.where(self.meaningful_words == word1)[0])
+        # # i2 = np.atleast_1d(np.where(self.meaningful_words == word2)[0])
+        
+        # deletion = np.concatenate((i1, i2))
+        
+        # self.meaningful_words = np.delete(self.meaningful_words, deletion)
+        # self.word_vectors = np.delete(self.word_vectors, deletion, axis = 0)
+        # self.vector_norms = np.delete(self.vector_norms, deletion)
+        
+        # dot_products = np.dot(self.word_vectors, result_vector)
+        # norms = self.vector_norms * np.linalg.norm(result_vector)
+        # cosine_similarities = dot_products/norms
+                
+        # # sorted_similarities = np.sort(cosine_similarities)
+        
+        # max_index = np.argmax(cosine_similarities)    
+            
+        # similarity_score = int(cosine_similarities[max_index]*100)
+        
+        # return self.meaningful_words[max_index], similarity_score
 
     
 #requires download...using spaCy for now
