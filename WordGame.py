@@ -56,7 +56,7 @@ TODO: have website built before tuesday?
 TODO: one way to ensure that the operations make sense is to ensure that there are at 
 least 2 words with above 60% accuracy or smthg like that, might be slow.
 '''
-
+#TODO: the print statement can say that it is below threshold when it is actually above because of the fix for the synonym issue 
 class WordGame:
     
     def __init__(self):
@@ -271,6 +271,8 @@ class WordGame:
         
         dot_products = np.dot(self.word_vectors, result_vector)
         norms = self.vector_norms * np.linalg.norm(result_vector)
+        
+        #This weeds out the inputs
         mask = np.isin(self.meaningful_words, list([word1, word2]))
         cosine_similarities = np.where(mask, -np.inf, dot_products/norms)
         max_index = np.argmax(cosine_similarities)
@@ -331,3 +333,30 @@ Ensure that this permanent deletion causes no issues in the simple addition meth
 #requires download...using spaCy for now
 #from gensim.models import KeyedVectors
 #self.word_vectors = KeyedVectors.load_word2vec_format("GoogleNews-vectors-negative300.bin", binary=True)
+
+
+
+#Tutorial
+
+'''
+import spacy
+from scipy.spatial.distance import cosine
+
+nlp = spacy.load("en_core_web_lg")
+
+word = nlp("king")
+print(word.vector)  # This prints a 300-dimensional vector
+
+king = nlp("king")
+man = nlp("man").vector
+woman = nlp("woman").vector
+result_vector = king - man + woman
+
+def find_closest_word(vector, words):
+    return min(words, key=lambda w: cosine(vector, nlp(w).vector))
+
+word_list = wordfreq.top_n_list("en", 5000)
+closest = find_closest_word(result_vector, word_list)
+print(closest)
+
+'''
